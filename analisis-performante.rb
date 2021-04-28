@@ -22,7 +22,7 @@ CSV.foreach("EN-HIV-translations-2020-10-23.csv", :headers => true) do |row|
     raise "Ya existía el registo. Algo raro pasa. El id es #{id} y el objeto que existe es #{$objeto_traducciones[id]}."
   end
 
-  $objeto_traducciones[id] = {en: row["Summary"], es: nil, pt: nil, color: row["Interaction_Status_color"]}
+  $objeto_traducciones[id] = {en: row["Summary"], es: nil, pt: nil, color: row["Interaction_Status_color"], drug: row["Primary_Drug"], commedication: row["Comedication"]}
 end
 
 
@@ -39,6 +39,7 @@ def importar_traduccion(archivo, nombre_columna, idioma_texto, idioma_symbol)
       if $objeto_traducciones[id][idioma_symbol]
         raise "Ya existía la traducción #{idioma_texto} en el registo #{id}. Algo raro pasa."
       end
+
       $objeto_traducciones[id][idioma_symbol] = row[nombre_columna]
     end
   end
@@ -47,10 +48,16 @@ end
 ## Es importante que por cada idioma se importen en orden de fecha creciente ya una traducción más reciente de un registro existente representa una actualización
 
 # Traducciones primer envío ES
-importar_traduccion("ES-HIV-interactions-2019-03-13.csv","Summary_ES", "español", :es)
+importar_traduccion("Enero/HIV-interactions-2019-03-13 18-05-48-021_TRADUCCION.csv","Resumen", "español", :es)
 
 # Traducciones segundo envío ES
-importar_traduccion("ES-HIV-translations-2020-02-18.csv","Summary_ES", "español", :es)
+importar_traduccion("Enero/ES_HIV-translations-2020-02-18.csv","Summary_ES", "español", :es)
+
+# Envio final ES
+importar_traduccion("Enero/a-traducir-es 6-11-2020.csv","Summary_ES", "español", :es)
+
+
+###############
 
 #Primer envío traducción PT
 importar_traduccion("PT-1 julio 2020.csv","Summary_PT", "portugués", :pt)
@@ -58,6 +65,9 @@ importar_traduccion("PT-1 julio 2020.csv","Summary_PT", "portugués", :pt)
 #Envíos Gabriela (completo)
 importar_traduccion("PT-HIV-translations-2020-02-18.csv","Resumo", "portugués", :pt)
 
+#Envio Eileen
+importar_traduccion("Febrero/a-traducir-pt 5_2_2021.xlsx - a-traducir-pt.csv","Summary_PT", "portugués", :pt)
+importar_traduccion("ILS-PT-April142021 - ILS-PT-April142021.csv","Summary_PT", "portugués", :pt)
 
 # Genero un objeto traducciones, agrupado por texto en inglés summary
 # { summary_en -> { id, es -> listado , pt } }
@@ -84,6 +94,7 @@ $objeto_traducciones.each do |id, valores|
     end
   end
 end
+
 
 File.delete("traducciones-agrupadas.csv",) if File.exist?("traducciones-agrupadas.csv",)
 traducciones_agrupadas_csv = CSV.open("traducciones-agrupadas.csv", "a+")
@@ -169,21 +180,48 @@ end
 # Guardo los resultados agrupados completos
 File.delete("resultados-performante.csv",) if File.exist?("resultados-performante.csv")
 resultados_csv = CSV.open("resultados-performante.csv", "a+")
-resultados_header = ["Unique_identifier", "Color","Summary_EN", "Summary_ES", "Summary_PT"]
+resultados_header = ["Unique_identifier", "Color", "Primary_Drug", "Comedication", "Summary_EN", "Summary_ES", "Summary_PT"]
 resultados_csv << resultados_header
 
 
 $objeto_traducciones.each do |id, valores|
+
+  if valores[:es]
+    traduccion_es = valores[:es]
+  else
+    traduccion_es = traducciones_agrupadas[valores[:en]][:es].last
+  end
+
+  if valores[:pt]
+    traduccion_pt = valores[:pt]
+  else
+    traduccion_pt = traducciones_agrupadas[valores[:en]][:pt].last
+  end
+
   if valores[:en]
     resultados_csv << [
       id,
       valores[:color],
+      valores[:drug],
+      valores[:commedication],
       valores[:en],
-      traducciones_agrupadas[valores[:en]][:es].last,
-      traducciones_agrupadas[valores[:en]][:pt].last,
+      traduccion_es,
+      traduccion_pt,
     ]
   end
 end
+
+# Agrego color a las traducciones últimas
+# File.delete("Febrero/color-5_2_2021.csv") if File.exist?("Febrero/color-5_2_2021.csv")
+# con_color_csv = CSV.open("Febrero/color-5_2_2021.csv", "a+")
+# con_color_csv << ["Unique_identifier", "Color","Summary_EN", "Summary_ES"]
+
+
+# CSV.foreach("Febrero/a-traducir-pt 5_2_2021.xlsx - a-traducir-pt.csv", :headers => true) do |row|
+#   id = row["Unique_identifier"]
+#   color = $objeto_traducciones[id][:color]
+#   con_color_csv << [id, color, row["Summary_EN"], row["Summary_PT"]]
+# end
 
 
 
